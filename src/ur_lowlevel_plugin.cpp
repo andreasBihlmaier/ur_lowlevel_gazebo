@@ -36,11 +36,7 @@ namespace gazebo
     m_node = new ros::NodeHandle(m_nodeName);
     m_lastUpdateTime = ros::Time::now();
 
-    /*
-    unsigned lwrNameLen = std::string("lwrN").size();
-    std::string pluginName = _sdf->GetAttribute("name")->GetAsString();
-    std::string lwrName = pluginName.substr(pluginName.size() - lwrNameLen);
-    */
+    std::string urName("ur5");
 
 #if 0
     std::cout << "_sdf: name=" << _sdf->GetName() << " attributeCount=" << _sdf->GetAttributeCount() << std::endl;
@@ -50,7 +46,7 @@ namespace gazebo
       std::cout << attrIdx << " key=" << param->GetKey() << " value=" << param->GetAsString() << std::endl;
     }
 
-    std::cout << "LWR name: " << m_model->GetName() << " childCount=" << m_model->GetChildCount() << std::endl;
+    std::cout << "UR name: " << m_model->GetName() << " childCount=" << m_model->GetChildCount() << std::endl;
     std::cout << "Children: " << std::endl;
     for (unsigned childIdx = 0; childIdx < m_model->GetChildCount(); childIdx++) {
       physics::BasePtr child = m_model->GetChild(childIdx);
@@ -59,35 +55,44 @@ namespace gazebo
     }
 #endif 
 
-    /*
-    // Extract only joints belonging to current lwr, even if it is part of larger model
     physics::Joint_V joints = m_model->GetJoints();
-    std::cout << lwrName << " joints:" << std::endl;
+    // Extract only joints belonging to ur, even if it is part of larger model
+    // Two cases:
+    // 1) Not part of larger model ("::" not part of any name) -> use all joints
+    // 2) Part of larger model -> use only joints with urName parent/prefix
+    bool urPartOfLargerModel = false;
     for (size_t jointIdx = 0; jointIdx < joints.size(); jointIdx++) {
       physics::JointPtr currJoint = joints[jointIdx];
-      if (lwrName == currJoint->GetName().substr(0, lwrNameLen) || currJoint->GetName().find(std::string("::") + lwrName) != std::string::npos) {
+      if (currJoint->GetName().find(std::string("::")) != std::string::npos) {
+        urPartOfLargerModel = true;
+        break;
+      }
+    }
+    std::cout << urName << " joints:" << std::endl;
+    for (size_t jointIdx = 0; jointIdx < joints.size(); jointIdx++) {
+      physics::JointPtr currJoint = joints[jointIdx];
+      if (!urPartOfLargerModel || (urName == currJoint->GetName().substr(0, urName.size()) || currJoint->GetName().find(std::string("::") + urName) != std::string::npos)) {
         m_joints.push_back(currJoint);
         std::cout << jointIdx << " name=" << currJoint->GetName() << " angle=" << currJoint->GetAngle(0) << " v=" << currJoint->GetVelocity(0) << std::endl;
       }
     }
-    */
 
     /*
-    m_sendUdpSocket = new boost::asio::ip::udp::socket(m_ioService);
-    m_udpResolver = new boost::asio::ip::udp::resolver(m_ioService);
-    boost::asio::ip::udp::resolver::query sendPortQuery(boost::asio::ip::udp::v4(),
+    m_sendTcpSocket = new boost::asio::ip::tcp::socket(m_ioService);
+    m_tcpResolver = new boost::asio::ip::tcp::resolver(m_ioService);
+    boost::asio::ip::tcp::resolver::query sendPortQuery(boost::asio::ip::tcp::v4(),
                                                         "localhost",
                                                         ahb::string::toString(m_sendFriPort));
-    m_sendUdpEndpoint = *(m_udpResolver->resolve(sendPortQuery));
+    m_sendTcpEndpoint = *(m_tcpResolver->resolve(sendPortQuery));
 
     try {
-      m_sendUdpSocket->connect(m_sendUdpEndpoint);
+      m_sendTcpSocket->connect(m_sendTcpEndpoint);
     } catch (boost::system::system_error const& e) {
       ROS_FATAL_STREAM("URLowlevelPlugin: Failed to connect UR node: " << e.what());
     }
 
-    m_recvUdpSocket = new boost::asio::ip::udp::socket(m_ioService,
-                                                       boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v4(),
+    m_recvTcpSocket = new boost::asio::ip::tcp::socket(m_ioService,
+                                                       boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(),
                                                                                       m_recvFriPort));
     */
 
@@ -126,17 +131,17 @@ namespace gazebo
   URLowlevelPlugin::updateRobotState()
   {
     /*
-    if (m_recvUdpSocket->available() == 0) {
+    if (m_recvTcpSocket->available() == 0) {
       if (m_currentFriMsrData.head.sendSeqCount != 0) {
-        ROS_FATAL_STREAM("URLowlevelPlugin: No UDP data (tFriCmdData) received");
+        ROS_FATAL_STREAM("URLowlevelPlugin: No tcp data (tFriCmdData) received");
       }
       return;
     }
 
-    boost::asio::ip::udp::endpoint sender_endpoint;
+    boost::asio::ip::tcp::endpoint sender_endpoint;
     boost::asio::socket_base::message_flags flags;
     boost::system::error_code error;
-    m_recvUdpSocket->receive_from(boost::asio::buffer(&m_lastFriCmdData, sizeof(m_lastFriCmdData)),
+    m_recvTcpSocket->receive_from(boost::asio::buffer(&m_lastFriCmdData, sizeof(m_lastFriCmdData)),
                                   sender_endpoint,
                                   flags,
                                   error);
@@ -171,7 +176,7 @@ namespace gazebo
     }
 
     try {
-      m_sendUdpSocket->send(boost::asio::buffer(&m_currentFriMsrData, sizeof(m_currentFriMsrData)));
+      m_sendTcpSocket->send(boost::asio::buffer(&m_currentFriMsrData, sizeof(m_currentFriMsrData)));
     } catch (boost::system::system_error const& e) {
       ROS_FATAL_STREAM("URLowlevelPlugin: Failed to send to FRI node: " << e.what());
     }

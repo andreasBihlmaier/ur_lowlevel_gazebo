@@ -66,10 +66,10 @@ namespace gazebo {
       uint16_t m_recvURPort;
       double m_updatePeriod;
       boost::asio::io_service m_ioService;
-      boost::asio::ip::udp::resolver* m_udpResolver;
-      boost::asio::ip::udp::socket* m_sendUdpSocket;
-      boost::asio::ip::udp::endpoint m_sendUdpEndpoint;
-      boost::asio::ip::udp::socket* m_recvUdpSocket;
+      boost::asio::ip::tcp::resolver* m_tcpResolver;
+      boost::asio::ip::tcp::socket* m_sendTcpSocket;
+      boost::asio::ip::tcp::endpoint m_sendTcpEndpoint;
+      boost::asio::ip::tcp::socket* m_recvTcpSocket;
   
   };
 }
