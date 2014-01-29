@@ -68,6 +68,8 @@ namespace gazebo {
       uint16_t m_sendURPort;
       uint16_t m_recvURPort;
       double m_updatePeriod;
+      std::string m_resetProg;
+      std::string m_driverProg;
       boost::asio::io_service m_ioService;
       boost::asio::ip::tcp::acceptor* m_recvTcpAcceptor;
       boost::asio::ip::tcp::socket* m_recvTcpSocket;

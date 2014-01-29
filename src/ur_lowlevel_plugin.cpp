@@ -36,6 +36,9 @@ namespace gazebo
     m_node = new ros::NodeHandle(m_nodeName);
     m_lastUpdateTime = ros::Time::now();
 
+    //TODO m_resetProg = roslib.packages.get_pkg_dir('ur_driver') + '/prog_reset'
+    //TODO m_driverProg =  roslib.packages.get_pkg_dir('ur_driver') + '/prog'
+
     std::string urName("ur5");
 
 #if 0
@@ -180,7 +183,16 @@ namespace gazebo
       return;
     }
     m_lastRecvUR[bytesReceived] = '\0';
-    printf("received: %s\n", m_lastRecvUR);
+    //printf("received: %s\n", m_lastRecvUR);
+
+    std::string recvString(m_lastRecvUR);
+    if (recvString == m_resetProg) {
+      ROS_INFO_STREAM("Received resetProg. Ignoring.\n");
+    } else if (recvString == m_driverProg) {
+      //TODO: m_runningProg = new UrDriverProg(m_sendURPort);
+    } else {
+      ROS_ERROR_STREAM("Received unknown data (ignoring):\n" << recvString);
+    }
   }
 
   void
