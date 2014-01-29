@@ -96,13 +96,20 @@ namespace gazebo
                                                            boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(),
                                                                                           m_recvURPort));
 
-    m_recvTcpSocket = new boost::asio::ip::tcp::socket(m_ioService);
-    m_recvTcpAcceptor->async_accept(*m_recvTcpSocket,
-                                    m_recvTcpEndpoint,
-                                    boost::bind(&URLowlevelPlugin::onAccept, this, boost::asio::placeholders::error));
+    m_nextRecvTcpSocket = new boost::asio::ip::tcp::socket(m_ioService);
+    m_recvTcpSocket = NULL;
+    startAsyncAccept(*m_nextRecvTcpSocket);
 
     m_updateConnection = event::Events::ConnectWorldUpdateBegin(
         boost::bind(&URLowlevelPlugin::OnUpdate, this));
+  }
+
+  void
+  URLowlevelPlugin::startAsyncAccept(boost::asio::ip::tcp::socket& p_recvSocket)
+  {
+    m_recvTcpAcceptor->async_accept(p_recvSocket,
+                                    m_recvTcpEndpoint,
+                                    boost::bind(&URLowlevelPlugin::onAccept, this, boost::asio::placeholders::error));
   }
 
   void
@@ -113,6 +120,9 @@ namespace gazebo
       return;
     }
 
+    m_recvTcpSocket = m_nextRecvTcpSocket;
+    m_nextRecvTcpSocket = new boost::asio::ip::tcp::socket(m_ioService);
+    startAsyncAccept(*m_nextRecvTcpSocket);
     ROS_INFO_STREAM("Connected to " << m_recvTcpEndpoint.address());
 
     // TODO
@@ -156,23 +166,21 @@ namespace gazebo
   void
   URLowlevelPlugin::pollRecvUR()
   {
-    /* TODO
-    if (!m_recvTcpSocket->available()) {
+    if (!m_recvTcpSocket || !m_recvTcpSocket->available()) {
       return;
     }
 
-    boost::asio::ip::tcp::endpoint sender_endpoint;
     boost::asio::socket_base::message_flags flags;
     boost::system::error_code error;
-    m_recvTcpSocket->receive_from(boost::asio::buffer(&m_lastRecvUR, sizeof(m_lastRecvUR)),
-                                  sender_endpoint,
-                                  flags,
-                                  error);
-
+    size_t bytesReceived = m_recvTcpSocket->receive(boost::asio::buffer(&m_lastRecvUR, sizeof(m_lastRecvUR)),
+                                                    flags,
+                                                    error);
     if (error) {
-      ROS_FATAL_STREAM("URLowlevelPlugin: Failed receive(): " << error);
+      ROS_FATAL_STREAM("Failed receive(): " << error);
+      return;
     }
-    */
+    m_lastRecvUR[bytesReceived] = '\0';
+    printf("received: %s\n", m_lastRecvUR);
   }
 
   void

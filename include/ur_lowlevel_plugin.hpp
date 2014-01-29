@@ -50,6 +50,7 @@ namespace gazebo {
       void pollRecvUR();
       void updateRobotState();
       void publishRobotState();
+      void startAsyncAccept(boost::asio::ip::tcp::socket& p_recvSocket);
       void onAccept(const boost::system::error_code& error);
   
       // variables
@@ -70,6 +71,7 @@ namespace gazebo {
       boost::asio::io_service m_ioService;
       boost::asio::ip::tcp::acceptor* m_recvTcpAcceptor;
       boost::asio::ip::tcp::socket* m_recvTcpSocket;
+      boost::asio::ip::tcp::socket* m_nextRecvTcpSocket;
       boost::asio::ip::tcp::endpoint m_recvTcpEndpoint;
       char m_lastRecvUR[64 * 1024];
       boost::asio::ip::tcp::resolver* m_tcpResolver;
