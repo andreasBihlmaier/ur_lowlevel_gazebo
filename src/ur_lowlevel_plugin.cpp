@@ -114,6 +114,13 @@ namespace gazebo
     }
 
     ROS_INFO_STREAM("Connected to " << m_recvTcpEndpoint.address());
+
+    // TODO
+    // So far everything is general, but we don't want to implement UR Scripting
+    // language, therefore add a seperate class ProgClass that receives and sends universal_robot/ur_driver/prog
+    // messages. If this prog should change only ProgClass has to be
+    // modified not this more general plugin
+    // Implement recv by calling a method on ProgClass; send by handing a function ptr to ProgClass
   }
 
   void
