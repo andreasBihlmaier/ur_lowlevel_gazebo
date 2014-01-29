@@ -47,8 +47,10 @@ namespace gazebo {
     private:
       // methods
       bool loadParams(sdf::ElementPtr _sdf);
+      void pollRecvUR();
       void updateRobotState();
       void publishRobotState();
+      void onAccept(const boost::system::error_code& error);
   
       // variables
       // gazebo
@@ -66,10 +68,13 @@ namespace gazebo {
       uint16_t m_recvURPort;
       double m_updatePeriod;
       boost::asio::io_service m_ioService;
+      boost::asio::ip::tcp::acceptor* m_recvTcpAcceptor;
+      boost::asio::ip::tcp::socket* m_recvTcpSocket;
+      boost::asio::ip::tcp::endpoint m_recvTcpEndpoint;
+      char m_lastRecvUR[64 * 1024];
       boost::asio::ip::tcp::resolver* m_tcpResolver;
       boost::asio::ip::tcp::socket* m_sendTcpSocket;
       boost::asio::ip::tcp::endpoint m_sendTcpEndpoint;
-      boost::asio::ip::tcp::socket* m_recvTcpSocket;
   
   };
 }

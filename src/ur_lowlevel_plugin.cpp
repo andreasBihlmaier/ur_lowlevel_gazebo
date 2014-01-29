@@ -20,7 +20,7 @@ namespace gazebo
 
     m_model = _parent;
 
-    m_updatePeriod = 0.001; // TODO
+    m_updatePeriod = 0.008;
 
     if (!ros::isInitialized()) {
       ROS_FATAL_STREAM("URLowlevelPlugin: A ROS node for Gazebo has not been initialized, unable to load plugin. "
@@ -90,14 +90,30 @@ namespace gazebo
     } catch (boost::system::system_error const& e) {
       ROS_FATAL_STREAM("URLowlevelPlugin: Failed to connect UR node: " << e.what());
     }
-
-    m_recvTcpSocket = new boost::asio::ip::tcp::socket(m_ioService,
-                                                       boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(),
-                                                                                      m_recvFriPort));
     */
+
+    m_recvTcpAcceptor = new boost::asio::ip::tcp::acceptor(m_ioService,
+                                                           boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(),
+                                                                                          m_recvURPort));
+
+    m_recvTcpSocket = new boost::asio::ip::tcp::socket(m_ioService);
+    m_recvTcpAcceptor->async_accept(*m_recvTcpSocket,
+                                    m_recvTcpEndpoint,
+                                    boost::bind(&URLowlevelPlugin::onAccept, this, boost::asio::placeholders::error));
 
     m_updateConnection = event::Events::ConnectWorldUpdateBegin(
         boost::bind(&URLowlevelPlugin::OnUpdate, this));
+  }
+
+  void
+  URLowlevelPlugin::onAccept(const boost::system::error_code& error)
+  {
+    if (error) {
+      ROS_FATAL_STREAM("Failed in onAccept(): " << error);
+      return;
+    }
+
+    ROS_INFO_STREAM("Connected to " << m_recvTcpEndpoint.address());
   }
 
   void
@@ -105,6 +121,9 @@ namespace gazebo
   {
     ros::Duration sinceLastUpdateDuration = ros::Time::now() - m_lastUpdateTime;
 
+    m_ioService.poll();
+
+    pollRecvUR();
     if (sinceLastUpdateDuration.toSec() >= m_updatePeriod) {
       updateRobotState();
       publishRobotState();
@@ -125,6 +144,28 @@ namespace gazebo
     m_recvURPort = ahb::string::toIntSlow<uint16_t>(_sdf->GetElement("recvURPort")->Get<std::string>());
 
     return true;
+  }
+
+  void
+  URLowlevelPlugin::pollRecvUR()
+  {
+    /* TODO
+    if (!m_recvTcpSocket->available()) {
+      return;
+    }
+
+    boost::asio::ip::tcp::endpoint sender_endpoint;
+    boost::asio::socket_base::message_flags flags;
+    boost::system::error_code error;
+    m_recvTcpSocket->receive_from(boost::asio::buffer(&m_lastRecvUR, sizeof(m_lastRecvUR)),
+                                  sender_endpoint,
+                                  flags,
+                                  error);
+
+    if (error) {
+      ROS_FATAL_STREAM("URLowlevelPlugin: Failed receive(): " << error);
+    }
+    */
   }
 
   void
