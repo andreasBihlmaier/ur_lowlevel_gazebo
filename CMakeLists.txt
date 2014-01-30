@@ -92,7 +92,7 @@ catkin_package(
 ## Build ##
 ###########
 
-SET(CMAKE_CXX_FLAGS "-O2 -Wall -Werror")
+SET(CMAKE_CXX_FLAGS "-O2 -Wall -Wextra -Werror")
 
 link_directories(
   ${GAZEBO_LIBRARY_DIRS}
@@ -111,6 +111,7 @@ include_directories(
 ## Declare a cpp library
 add_library(ur_lowlevel_plugin
   src/ur_lowlevel_plugin.cpp
+  src/ur_driver_prog.cpp
 )
 
 ## Declare a cpp executable
