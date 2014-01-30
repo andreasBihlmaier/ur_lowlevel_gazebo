@@ -4,10 +4,12 @@
 #include <stdio.h>
 
 // library includes
+#include <ros/package.h>
 #include <boost/bind.hpp>
 
 // custom includes
 #include <ahbstring.h>
+#include <ahbre.hpp>
 
 
 namespace gazebo
@@ -36,8 +38,17 @@ namespace gazebo
     m_node = new ros::NodeHandle(m_nodeName);
     m_lastUpdateTime = ros::Time::now();
 
-    //TODO m_resetProg = roslib.packages.get_pkg_dir('ur_driver') + '/prog_reset'
-    //TODO m_driverProg =  roslib.packages.get_pkg_dir('ur_driver') + '/prog'
+    m_resetProg = ahb::string::fileToString(ros::package::getPath("ur_driver") + "/prog_reset");
+    if (m_resetProg.empty()) {
+      ROS_FATAL_STREAM("Could not load resetProg");
+    }
+    normalizeProgString(m_resetProg);
+    m_driverProg = ahb::string::fileToString(ros::package::getPath("ur_driver") + "/prog");
+    if (m_driverProg.empty()) {
+      ROS_FATAL_STREAM("Could not load driverProg");
+    }
+    normalizeProgString(m_driverProg);
+    std::cout << "m_driverProg:\n" << m_driverProg << std::endl;
 
     std::string urName("ur5");
 
@@ -108,35 +119,6 @@ namespace gazebo
   }
 
   void
-  URLowlevelPlugin::startAsyncAccept(boost::asio::ip::tcp::socket& p_recvSocket)
-  {
-    m_recvTcpAcceptor->async_accept(p_recvSocket,
-                                    m_recvTcpEndpoint,
-                                    boost::bind(&URLowlevelPlugin::onAccept, this, boost::asio::placeholders::error));
-  }
-
-  void
-  URLowlevelPlugin::onAccept(const boost::system::error_code& error)
-  {
-    if (error) {
-      ROS_FATAL_STREAM("Failed in onAccept(): " << error);
-      return;
-    }
-
-    m_recvTcpSocket = m_nextRecvTcpSocket;
-    m_nextRecvTcpSocket = new boost::asio::ip::tcp::socket(m_ioService);
-    startAsyncAccept(*m_nextRecvTcpSocket);
-    ROS_INFO_STREAM("Connected to " << m_recvTcpEndpoint.address());
-
-    // TODO
-    // So far everything is general, but we don't want to implement UR Scripting
-    // language, therefore add a seperate class ProgClass that receives and sends universal_robot/ur_driver/prog
-    // messages. If this prog should change only ProgClass has to be
-    // modified not this more general plugin
-    // Implement recv by calling a method on ProgClass; send by handing a function ptr to ProgClass
-  }
-
-  void
   URLowlevelPlugin::OnUpdate()
   {
     ros::Duration sinceLastUpdateDuration = ros::Time::now() - m_lastUpdateTime;
@@ -173,6 +155,7 @@ namespace gazebo
       return;
     }
 
+
     boost::asio::socket_base::message_flags flags;
     boost::system::error_code error;
     size_t bytesReceived = m_recvTcpSocket->receive(boost::asio::buffer(&m_lastRecvUR, sizeof(m_lastRecvUR)),
@@ -186,6 +169,7 @@ namespace gazebo
     //printf("received: %s\n", m_lastRecvUR);
 
     std::string recvString(m_lastRecvUR);
+    normalizeProgString(recvString);
     if (recvString == m_resetProg) {
       ROS_INFO_STREAM("Received resetProg. Ignoring.\n");
     } else if (recvString == m_driverProg) {
@@ -249,6 +233,42 @@ namespace gazebo
       ROS_FATAL_STREAM("URLowlevelPlugin: Failed to send to FRI node: " << e.what());
     }
     */
+  }
+
+  void
+  URLowlevelPlugin::startAsyncAccept(boost::asio::ip::tcp::socket& p_recvSocket)
+  {
+    m_recvTcpAcceptor->async_accept(p_recvSocket,
+                                    m_recvTcpEndpoint,
+                                    boost::bind(&URLowlevelPlugin::onAccept, this, boost::asio::placeholders::error));
+  }
+
+  void
+  URLowlevelPlugin::onAccept(const boost::system::error_code& error)
+  {
+    if (error) {
+      ROS_FATAL_STREAM("Failed in onAccept(): " << error);
+      return;
+    }
+
+    m_recvTcpSocket = m_nextRecvTcpSocket;
+    m_nextRecvTcpSocket = new boost::asio::ip::tcp::socket(m_ioService);
+    startAsyncAccept(*m_nextRecvTcpSocket);
+    ROS_INFO_STREAM("Connected to " << m_recvTcpEndpoint.address());
+
+    // TODO
+    // So far everything is general, but we don't want to implement UR Scripting
+    // language, therefore add a seperate class ProgClass that receives and sends universal_robot/ur_driver/prog
+    // messages. If this prog should change only ProgClass has to be
+    // modified not this more general plugin
+    // Implement recv by calling a method on ProgClass; send by handing a function ptr to ProgClass
+  }
+
+  void
+  URLowlevelPlugin::normalizeProgString(std::string& p_progString)
+  {
+    ahb::string::replace(p_progString, "\r\n", "\n");
+    ahb::re::sub(p_progString, "^  HOSTNAME = \".*\"$", "  HOSTNAME = \"dummy\"");
   }
 /*------------------------------------------------------------------------}}}-*/
 

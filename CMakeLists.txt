@@ -8,6 +8,7 @@ find_package(catkin REQUIRED COMPONENTS
   gazebo_ros
   roscpp
   ahbstring
+  ahbre
 )
 
 ## System dependencies are found with CMake's conventions

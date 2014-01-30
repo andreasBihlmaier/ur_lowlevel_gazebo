@@ -52,6 +52,7 @@ namespace gazebo {
       void publishRobotState();
       void startAsyncAccept(boost::asio::ip::tcp::socket& p_recvSocket);
       void onAccept(const boost::system::error_code& error);
+      void normalizeProgString(std::string& p_progString);
   
       // variables
       // gazebo
