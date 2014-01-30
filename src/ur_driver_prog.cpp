@@ -31,6 +31,8 @@ UrDriverProg::UrDriverProg(gazebo::physics::Joint_V& p_joints, const std::map<st
   } catch (boost::system::system_error const& e) {
     ROS_FATAL_STREAM("Failed to connect UR driver (" << m_sendHost << ":" << m_sendPort << "): " << e.what());
   }
+
+  m_servojStart = m_servojGoal = currentState2Servoj();
 }
 
 void
@@ -42,7 +44,7 @@ UrDriverProg::update()
     m_lastUpdateTime = ros::Time::now();
     sendJointState();
     recvMsg();
-    //TODO moveJoints();
+    servoJoints();
   } else {
     //std::cout << "Not publishing (periodic time not yet reached), only " << sinceLastUpdateDuration.toSec()  << "s passed" << std::endl;
   }
@@ -102,11 +104,60 @@ UrDriverProg::recvMsg()
     }
     servojMsgType* servoMsgNetworkBO = (servojMsgType*)m_lastRecv;
 
-    // TODO handle servojMsg as follows:
-    // - store servoGoal=(target joint positions and absolute time) and servoStart=(current joint positions and time)
-    // - in moveJoints() indepenently interpolate each joint between servoStart and servoGoal
+    m_servojStart = currentState2Servoj();
+    m_servojGoal.time = ros::Time::now() + ros::Duration(double(ntohl(servoMsgNetworkBO->time)) / m_progDict["MULT_time"]);
+    for (size_t jointIdx = 0; jointIdx < m_joints.size(); jointIdx++) {
+      m_servojGoal.positions[jointIdx] = double(ntohl(servoMsgNetworkBO->positions[jointIdx])) / m_progDict["MULT_jointstate"];
+    }
   } else {
     ROS_FATAL_STREAM("Unknown message type: " << mtype);
   }
+}
+
+void
+UrDriverProg::servoJoints()
+{
+  if (m_servojGoal.time > ros::Time::now()) {
+    return;
+  }
+
+  std::cout << "m_servojStart: " << toString(m_servojStart) << std::endl;
+  std::cout << "m_servojGoal: " << toString(m_servojGoal) << std::endl;
+
+  // indepenently interpolate each joint between servoStart and servoGoal
+  double nextJointPos[6];
+  double moveDuration = (m_servojGoal.time - m_servojStart.time).toSec();
+  double timeIntoMove = (ros::Time::now() - m_servojStart.time).toSec();
+  double interpolationParam = timeIntoMove / moveDuration;
+  assert(interpolationParam >= 0 && interpolationParam <= 1);
+  for (size_t jointIdx = 0; jointIdx < m_joints.size(); jointIdx++) {
+    double moveLength = m_servojGoal.positions[jointIdx] - m_servojStart.positions[jointIdx];
+    nextJointPos[jointIdx] = m_servojStart.positions[jointIdx] + interpolationParam * moveLength;
+ 
+    if (nextJointPos[jointIdx] < m_joints[jointIdx]->GetLowerLimit(0).Radian()) {
+      ROS_FATAL_STREAM("Joint" << jointIdx << " below joint limit (" << m_joints[jointIdx]->GetLowerLimit(0).Radian() << "): " << nextJointPos[jointIdx] << ". Will not move robot at all.\n");
+      return;
+    } else if (nextJointPos[jointIdx] > m_joints[jointIdx]->GetUpperLimit(0).Radian()) {
+      ROS_FATAL_STREAM("Joint" << jointIdx << " above joint limit (" << m_joints[jointIdx]->GetUpperLimit(0).Radian() << "): " << nextJointPos[jointIdx] << ". Will not move robot at all.\n");
+      return;
+    }
+  }
+
+  for (size_t jointIdx = 0; jointIdx < m_joints.size(); jointIdx++) {
+    m_joints[jointIdx]->SetAngle(0, nextJointPos[jointIdx]);
+  }
+}
+
+
+servojType
+UrDriverProg::currentState2Servoj()
+{
+  servojType servoj;
+  for (size_t jointIdx = 0; jointIdx < m_joints.size(); jointIdx++) {
+    servoj.positions[jointIdx] = m_joints[jointIdx]->GetAngle(0).Radian();
+  }
+  servoj.time = ros::Time::now();
+
+  return servoj;
 }
 /*------------------------------------------------------------------------}}}-*/

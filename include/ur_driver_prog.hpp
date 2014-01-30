@@ -34,6 +34,14 @@ struct servojMsg
 typedef struct servojMsg servojMsgType;
 
 
+struct servoj
+{
+  double positions[6];
+  ros::Time time;
+};
+typedef struct servoj servojType;
+
+
 class UrDriverProg
 {
   public:
@@ -67,6 +75,8 @@ class UrDriverProg
     // methods
     void sendJointState();
     void recvMsg();
+    void servoJoints();
+    servojType currentState2Servoj();
 
     // variables
     gazebo::physics::Joint_V& m_joints;
@@ -81,6 +91,8 @@ class UrDriverProg
     boost::asio::ip::tcp::endpoint m_sendTcpEndpoint;
     jointsMsgType m_currentJointsMsgNetworkBO;
     char m_lastRecv[1024];
+    servojType m_servojStart;
+    servojType m_servojGoal;
 };
 
 #endif // _UR_DRIVER_PROG_H_
