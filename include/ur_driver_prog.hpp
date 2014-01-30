@@ -28,6 +28,7 @@ typedef struct jointsMsg jointsMsgType;
 struct servojMsg
 {
   int32_t mtype;
+  int32_t waypoint_id;
   int32_t positions[6];
   int32_t time;
 } __attribute__ ((__packed__));

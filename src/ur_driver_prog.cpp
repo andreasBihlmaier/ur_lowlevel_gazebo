@@ -8,6 +8,20 @@
 #include <ahbstring.h>
 
 /*---------------------------------- public: -----------------------------{{{-*/
+std::string
+toString(const servojType& servoj)
+{
+  std::stringstream ss;
+
+  ss << "time: " << servoj.time
+     << " positions: ";
+  for (unsigned pIdx = 0; pIdx < 6; pIdx++) {
+    ss << servoj.positions[pIdx] << " ";
+  }
+
+  return ss.str();
+}
+
 UrDriverProg::UrDriverProg(gazebo::physics::Joint_V& p_joints, const std::map<std::string,double>& p_progDict, const std::string& p_sendHost, uint16_t p_sendPort)
   :m_joints(p_joints),
    m_progDict(p_progDict),
@@ -33,6 +47,7 @@ UrDriverProg::UrDriverProg(gazebo::physics::Joint_V& p_joints, const std::map<st
   }
 
   m_servojStart = m_servojGoal = currentState2Servoj();
+  m_servojGoal.time += ros::Duration(m_updatePeriod);
 }
 
 void
@@ -94,10 +109,12 @@ UrDriverProg::recvMsg()
   int32_t mtype = ntohl(*mtypeNetworkBO);
   if (mtype == int32_t(m_progDict["MSG_QUIT"])) {
     std::cout << "MSG_QUIT" << std::endl;
+    // TODO
   } else if (mtype == int32_t(m_progDict["MSG_STOPJ"])) {
     std::cout << "MSG_STOPJ" << std::endl;
+    // TODO
   } else if (mtype == int32_t(m_progDict["MSG_SERVOJ"])) {
-    std::cout << "MSG_SERVOJ" << std::endl;
+    //std::cout << "MSG_SERVOJ" << std::endl;
     if (bytesReceived != sizeof(servojMsgType)) {
       ROS_FATAL_STREAM("Received incomplete MSG_SERVOJ. Will ignore this message.");
       return;
@@ -106,8 +123,9 @@ UrDriverProg::recvMsg()
 
     m_servojStart = currentState2Servoj();
     m_servojGoal.time = ros::Time::now() + ros::Duration(double(ntohl(servoMsgNetworkBO->time)) / m_progDict["MULT_time"]);
+    double int2doubleDiv = m_progDict["MULT_jointstate"];
     for (size_t jointIdx = 0; jointIdx < m_joints.size(); jointIdx++) {
-      m_servojGoal.positions[jointIdx] = double(ntohl(servoMsgNetworkBO->positions[jointIdx])) / m_progDict["MULT_jointstate"];
+      m_servojGoal.positions[jointIdx] = double(int32_t(ntohl(servoMsgNetworkBO->positions[jointIdx]))) / int2doubleDiv;
     }
   } else {
     ROS_FATAL_STREAM("Unknown message type: " << mtype);
@@ -117,18 +135,18 @@ UrDriverProg::recvMsg()
 void
 UrDriverProg::servoJoints()
 {
-  if (m_servojGoal.time > ros::Time::now()) {
+  if (ros::Time::now() > m_servojGoal.time) {
     return;
   }
-
-  std::cout << "m_servojStart: " << toString(m_servojStart) << std::endl;
-  std::cout << "m_servojGoal: " << toString(m_servojGoal) << std::endl;
 
   // indepenently interpolate each joint between servoStart and servoGoal
   double nextJointPos[6];
   double moveDuration = (m_servojGoal.time - m_servojStart.time).toSec();
   double timeIntoMove = (ros::Time::now() - m_servojStart.time).toSec();
   double interpolationParam = timeIntoMove / moveDuration;
+  //std::cout << "m_servojStart: " << toString(m_servojStart) << std::endl;
+  //std::cout << "m_servojGoal: " << toString(m_servojGoal) << std::endl;
+  //std::cout << "moveDuration=" << moveDuration << " timeIntoMove=" << timeIntoMove << " interpolationParam=" << interpolationParam << std::endl;
   assert(interpolationParam >= 0 && interpolationParam <= 1);
   for (size_t jointIdx = 0; jointIdx < m_joints.size(); jointIdx++) {
     double moveLength = m_servojGoal.positions[jointIdx] - m_servojStart.positions[jointIdx];
