@@ -25,6 +25,13 @@ struct jointsMsg
 } __attribute__ ((__packed__));
 typedef struct jointsMsg jointsMsgType;
 
+struct servojMsg
+{
+  int32_t mtype;
+  int32_t positions[6];
+  int32_t time;
+} __attribute__ ((__packed__));
+typedef struct servojMsg servojMsgType;
 
 
 class UrDriverProg
@@ -59,6 +66,7 @@ class UrDriverProg
   private:
     // methods
     void sendJointState();
+    void recvMsg();
 
     // variables
     gazebo::physics::Joint_V& m_joints;
@@ -72,6 +80,7 @@ class UrDriverProg
     boost::asio::ip::tcp::socket* m_sendTcpSocket;
     boost::asio::ip::tcp::endpoint m_sendTcpEndpoint;
     jointsMsgType m_currentJointsMsgNetworkBO;
+    char m_lastRecv[1024];
 };
 
 #endif // _UR_DRIVER_PROG_H_

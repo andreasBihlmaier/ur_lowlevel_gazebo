@@ -41,6 +41,8 @@ UrDriverProg::update()
   if (sinceLastUpdateDuration.toSec() >= m_updatePeriod) {
     m_lastUpdateTime = ros::Time::now();
     sendJointState();
+    recvMsg();
+    //TODO moveJoints();
   } else {
     //std::cout << "Not publishing (periodic time not yet reached), only " << sinceLastUpdateDuration.toSec()  << "s passed" << std::endl;
   }
@@ -66,6 +68,45 @@ UrDriverProg::sendJointState()
     m_sendTcpSocket->send(boost::asio::buffer(&m_currentJointsMsgNetworkBO, sizeof(m_currentJointsMsgNetworkBO)));
   } catch (boost::system::system_error const& e) {
     ROS_FATAL_STREAM("Failed to send joint state: " << e.what());
+  }
+}
+
+void
+UrDriverProg::recvMsg()
+{
+  if (!m_sendTcpSocket->available()) {
+    return;
+  }
+
+  boost::asio::socket_base::message_flags flags;
+  boost::system::error_code error;
+  size_t bytesReceived = m_sendTcpSocket->receive(boost::asio::buffer(&m_lastRecv, sizeof(m_lastRecv)),
+                                                  flags,
+                                                  error);
+  if (error) {
+    ROS_FATAL_STREAM("Failed receive(): " << error);
+    return;
+  }
+
+  int32_t* mtypeNetworkBO = (int32_t*)m_lastRecv;
+  int32_t mtype = ntohl(*mtypeNetworkBO);
+  if (mtype == int32_t(m_progDict["MSG_QUIT"])) {
+    std::cout << "MSG_QUIT" << std::endl;
+  } else if (mtype == int32_t(m_progDict["MSG_STOPJ"])) {
+    std::cout << "MSG_STOPJ" << std::endl;
+  } else if (mtype == int32_t(m_progDict["MSG_SERVOJ"])) {
+    std::cout << "MSG_SERVOJ" << std::endl;
+    if (bytesReceived != sizeof(servojMsgType)) {
+      ROS_FATAL_STREAM("Received incomplete MSG_SERVOJ. Will ignore this message.");
+      return;
+    }
+    servojMsgType* servoMsgNetworkBO = (servojMsgType*)m_lastRecv;
+
+    // TODO handle servojMsg as follows:
+    // - store servoGoal=(target joint positions and absolute time) and servoStart=(current joint positions and time)
+    // - in moveJoints() indepenently interpolate each joint between servoStart and servoGoal
+  } else {
+    ROS_FATAL_STREAM("Unknown message type: " << mtype);
   }
 }
 /*------------------------------------------------------------------------}}}-*/
