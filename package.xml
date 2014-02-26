@@ -2,7 +2,7 @@
 <package>
   <name>ur_lowlevel_gazebo</name>
   <version>0.0.0</version>
-  <description>The ur_lowlevel_gazebo package</description>
+  <description>Gazebo plugin exposing the same binary interface to a simulated Universal Robots UR5 as used for the real robot by the ur_driver package</description>
   <maintainer email="andreas.bihlmaier@gmx.de">Andreas Bihlmaier</maintainer>
   <license>MIT</license>
 
