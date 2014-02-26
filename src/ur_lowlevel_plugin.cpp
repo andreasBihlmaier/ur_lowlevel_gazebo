@@ -50,7 +50,7 @@ URLowlevelPlugin::Load(physics::ModelPtr _parent, sdf::ElementPtr _sdf)
   normalizeProgString(m_driverProg);
   //std::cout << "m_driverProg:\n" << m_driverProg << std::endl;
 
-  std::string urName("ur5");
+  std::string urName("ur5_robot_lowlevel");
 
 #if 0
   std::cout << "_sdf: name=" << _sdf->GetName() << " attributeCount=" << _sdf->GetAttributeCount() << std::endl;
