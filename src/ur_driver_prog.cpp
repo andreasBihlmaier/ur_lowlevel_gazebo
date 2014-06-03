@@ -162,7 +162,7 @@ UrDriverProg::servoJoints()
   }
 
   for (size_t jointIdx = 0; jointIdx < m_joints.size(); jointIdx++) {
-    m_joints[jointIdx]->SetPosition(0, nextJointPos[jointIdx]);
+    m_joints[jointIdx]->SetAngle(0, nextJointPos[jointIdx]);
   }
 }
 
