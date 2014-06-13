@@ -88,6 +88,9 @@ URLowlevelPlugin::Load(physics::ModelPtr _parent, sdf::ElementPtr _sdf)
     if (!urPartOfLargerModel || (urName == currJoint->GetName().substr(0, urName.size()) || currJoint->GetName().find(std::string("::") + urName) != std::string::npos)) {
       m_joints.push_back(currJoint);
       std::cout << jointIdx << " name=" << currJoint->GetName() << " angle=" << currJoint->GetAngle(0) << " v=" << currJoint->GetVelocity(0) << std::endl;
+      if (m_joints.size() == 6) {
+        break;
+      }
     }
   }
 
