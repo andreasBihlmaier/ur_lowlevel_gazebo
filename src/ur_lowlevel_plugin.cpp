@@ -94,6 +94,10 @@ URLowlevelPlugin::Load(physics::ModelPtr _parent, sdf::ElementPtr _sdf)
     }
   }
 
+  if (m_joints.size() != 6) {
+    ROS_FATAL_STREAM("Could not find joints. Found " << m_joints.size() << " joints");
+  }
+
   m_recvTcpAcceptor = new boost::asio::ip::tcp::acceptor(m_ioService,
                                                          boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(),
                                                                                         m_recvURPort));
@@ -188,8 +192,12 @@ URLowlevelPlugin::onAccept(const boost::system::error_code& error)
 void
 URLowlevelPlugin::normalizeProgString(std::string& p_progString)
 {
+  //std::cout << "progString:\n" << p_progString << std::endl;
   ahb::string::replace(p_progString, "\r\n", "\n");
-  ahb::re::sub(p_progString, "^  HOSTNAME = \".*\"$", "  HOSTNAME = \"dummy\"");
+  // use [[:graph:]]* instead of .* because otherwise match may cross newlines
+  ahb::re::sub(p_progString, "^  HOSTNAME = \"[[:graph:]]*\"$", "  HOSTNAME = \"dummy\"");
+  ahb::re::sub(p_progString, "^  PORT = [[:graph:]]*$", "  PORT = dummy");
+  //std::cout << "normalized progString:\n" << p_progString << std::endl;
 }
 
 std::map<std::string,double>
@@ -198,6 +206,7 @@ URLowlevelPlugin::createProgDict(const std::string& progString)
   std::map<std::string,double> dict;
 
   std::vector<std::string> assignments = ahb::re::filter(progString, "^[ ]*[A-Z]+[A-Za-z_-]*[ ]*=[ ]*[0-9.]+[ ]*$");
+  //std::cout << "assignments:\n" << ahb::string::toString(assignments) << std::endl;
   for (size_t assignIndex = 0; assignIndex < assignments.size(); ++assignIndex) {
     std::string key, value;
     const std::string& currAssignment = assignments[assignIndex];

@@ -73,7 +73,10 @@ UrDriverProg::update()
 void
 UrDriverProg::sendJointState()
 {
-  m_currentJointsMsgNetworkBO.mtype = htonl(int32_t(m_progDict["MSG_JOINT_STATES"]));
+  memset(&m_currentJointsMsgNetworkBO, 0, sizeof(m_currentJointsMsgNetworkBO));
+  m_currentJointsMsgNetworkBO.mtype_joint = htonl(int32_t(m_progDict["MSG_JOINT_STATES"]));
+  m_currentJointsMsgNetworkBO.mtype_wrench = htonl(int32_t(m_progDict["MSG_WRENCH"]));
+  m_currentJointsMsgNetworkBO.mtype_io = htonl(int32_t(m_progDict["MSG_GET_IO"]));
   double double2intMult = m_progDict["MULT_jointstate"];
   for (size_t jointIdx = 0; jointIdx < m_joints.size(); jointIdx++) {
     gazebo::physics::JointPtr currJoint = m_joints[jointIdx];

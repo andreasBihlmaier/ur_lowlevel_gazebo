@@ -18,10 +18,18 @@
 
 struct jointsMsg
 {
-  int32_t mtype;
+  int32_t mtype_joint;
   int32_t positions[6];
   int32_t speeds[6];
   int32_t torques[6];
+  int32_t mtype_wrench;
+  int32_t wrenches[6];
+  int32_t mtype_io;
+  int32_t io_digital_in;
+  int32_t io_digital_out;
+  int32_t io_digital_flag;
+  int32_t io_analog_out[2];
+  int32_t io_analog_in[4];
 } __attribute__ ((__packed__));
 typedef struct jointsMsg jointsMsgType;
 
